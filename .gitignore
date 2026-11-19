@@ -1,0 +1,21 @@
+.databricks/
+build/
+dist/
+__pycache__/
+*.egg-info
+.venv/
+scratch/**
+!scratch/README.md
+**/explorations/**
+**/!explorations/README.md
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# Credentials / local environment (never commit)
+.env
+.env.*
+!.env.example
+.databrickscfg

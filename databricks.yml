@@ -35,6 +35,6 @@ targets:
     variables:
       catalog: workspace
       schema: prod
-    permissions:
-      - user_name: ${workspace.current_user.userName}
-        level: CAN_MANAGE
+    # No explicit permissions: the deploying identity (the CI service principal) owns the
+    # resources, and workspace admins keep CAN_MANAGE implicitly. Hard-coding a user here
+    # would break when a service principal deploys (it needs service_principal_name).

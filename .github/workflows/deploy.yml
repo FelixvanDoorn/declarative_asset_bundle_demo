@@ -1,0 +1,79 @@
+# CI/CD for the Databricks bundle.
+#   Pull request -> validate, test, deploy to the `dev` target (schema `dev`)
+#   Push to main -> validate, deploy to the `prod` target
+#
+# Auth: a Databricks service principal via OAuth M2M. Configure in GitHub:
+#   Variables (repo):        DATABRICKS_HOST
+#   Secrets (env `dev`):     DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET
+#   Secrets (env `prod`):    DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET
+# (A personal access token also works: set a DATABRICKS_TOKEN secret instead.)
+#
+# Free Edition note: only one pipeline of each type can be active at a time,
+# so this workflow only deploys; it never runs jobs or pipelines.
+
+name: Databricks bundle CI/CD
+
+on:
+  pull_request:          # never pull_request_target: it would expose secrets to fork PRs
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+
+jobs:
+  deploy-dev:
+    name: Validate, test & deploy (dev)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: dev
+    # All PRs share one dev deployment: queue runs instead of overlapping.
+    concurrency:
+      group: databricks-dev
+      cancel-in-progress: false
+    env:
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: databricks/setup-cli@v1.26.0
+      - uses: astral-sh/setup-uv@v10
+
+      - name: Validate bundle
+        run: databricks bundle validate -t dev --var schema=dev
+
+      - name: Run unit tests (Databricks Connect, serverless)
+        run: uv run pytest
+
+      - name: Deploy to dev
+        run: databricks bundle deploy -t dev --var schema=dev --auto-approve
+
+  deploy-prod:
+    name: Validate & deploy (prod)
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: prod
+    concurrency:
+      group: databricks-prod
+      cancel-in-progress: false
+    env:
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: databricks/setup-cli@v1.26.0
+
+      - name: Validate bundle
+        run: databricks bundle validate -t prod
+
+      - name: Deploy to prod
+        run: databricks bundle deploy -t prod --auto-approve

@@ -1,6 +1,7 @@
 # CI/CD for the Databricks bundle.
 #   Pull request -> validate, test, deploy to the `dev` target (schema `dev`)
 #   Push to main -> validate, deploy to the `prod` target
+# Both bundles are deployed: the ETL bundle (repo root) and the script agent (script_agent/).
 #
 # Auth: a Databricks service principal via OAuth M2M. Configure in GitHub:
 #   Variables (repo):        DATABRICKS_HOST
@@ -56,6 +57,12 @@ jobs:
       - name: Deploy to dev
         run: databricks bundle deploy -t dev --var schema=dev --auto-approve
 
+      - name: Validate & deploy script agent bundle (dev)
+        working-directory: script_agent
+        run: |
+          databricks bundle validate -t dev
+          databricks bundle deploy -t dev --auto-approve
+
   deploy-prod:
     name: Validate & deploy (prod)
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -77,3 +84,9 @@ jobs:
 
       - name: Deploy to prod
         run: databricks bundle deploy -t prod --auto-approve
+
+      - name: Validate & deploy script agent bundle (prod)
+        working-directory: script_agent
+        run: |
+          databricks bundle validate -t prod
+          databricks bundle deploy -t prod --auto-approve

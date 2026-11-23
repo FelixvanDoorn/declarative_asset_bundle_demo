@@ -1,0 +1,23 @@
+# One-off agent run on serverless compute. No schedule: start it with
+#   databricks bundle run script_agent
+resources:
+  jobs:
+    script_agent:
+      name: script_agent
+
+      tasks:
+        - task_key: run_agent
+          environment_key: agent
+          spark_python_task:
+            python_file: ../src/agent.py
+
+      environments:
+        - environment_key: agent
+          spec:
+            environment_version: "5"
+            # The agent's dependencies live only here (and in pyproject.toml for local runs);
+            # keep both lists in sync.
+            dependencies:
+              - databricks-langchain>=0.23.0
+              - langgraph>=1.2.24
+              - mlflow>=3.18.0

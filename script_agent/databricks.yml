@@ -1,0 +1,20 @@
+# Separate bundle for the LangGraph script agent, independent of the ETL bundle in the
+# parent folder. Deploy and run it from this folder:
+#   databricks bundle deploy [-t dev|prod]
+#   databricks bundle run script_agent [-t dev|prod]
+bundle:
+  name: script_agent
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    # Workspace host comes from DATABRICKS_HOST, DATABRICKS_CONFIG_PROFILE, or the
+    # DEFAULT profile in ~/.databrickscfg (same as the ETL bundle).
+    mode: development
+    default: true
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}

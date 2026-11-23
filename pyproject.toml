@@ -3,6 +3,8 @@ name = "declarative_asset_bundle_demo"
 version = "0.0.1"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "langchain-openai>=1.8.5",
+    "langgraph>=1.2.24",
     # Any dependencies for jobs and pipelines in this project can be added here
     # See also https://docs.databricks.com/dev-tools/bundles/library-dependencies
     #
@@ -17,6 +19,7 @@ dev = [
     "databricks-dlt",
     "databricks-connect>=16.4,<16.5",
     "ipykernel",
+    "mlflow>=3.18.0",
 ]
 
 [project.scripts]

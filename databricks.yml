@@ -7,10 +7,12 @@ bundle:
 include:
   - resources/*.yml
 
-# The script agent is a separate bundle (script_agent/); don't upload it with the ETL code.
+# script_agent/ and web_agent/ are separate bundles; don't upload them with the ETL code.
 sync:
   exclude:
     - script_agent/**
+    - web_agent/**
+    - web_agent/**
 
 # Variable declarations. These variables are assigned in the dev/prod targets below.
 variables:

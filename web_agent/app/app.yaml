@@ -1,0 +1,7 @@
+# Databricks Apps runtime config.
+command: ["python", "app.py"]
+env:
+  - name: SERVING_ENDPOINT
+    valueFrom: serving-endpoint   # resource names declared in resources/web_agent.app.yml
+  - name: MLFLOW_EXPERIMENT_ID
+    valueFrom: experiment

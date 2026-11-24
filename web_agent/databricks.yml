@@ -1,0 +1,20 @@
+# Web UI for the agent, deployed as a Databricks App. Separate from the ETL bundle
+# (parent folder) and script_agent/. From this folder:
+#   databricks bundle deploy           # create/update the app and its experiment
+#   databricks bundle run web_agent    # deploy the code and start the app
+bundle:
+  name: web_agent
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    # Workspace host comes from DATABRICKS_HOST, DATABRICKS_CONFIG_PROFILE, or the
+    # DEFAULT profile in ~/.databrickscfg.
+    mode: development
+    default: true
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}

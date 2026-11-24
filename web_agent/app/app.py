@@ -17,7 +17,7 @@ def answer(question: str) -> str:
 
 
 with gr.Blocks(title="Agent demo") as demo:
-    gr.Markdown("# Agent demo\nAsk the agent a question, e.g. *What is the weather in SF?*")
+    gr.Markdown("# Agent demo\nAsk a question about the Wikipedia articles in the index, e.g. *Where is the Ladin language spoken?*")
 
     gr.Markdown("## Question")
     question = gr.Textbox(show_label=False, placeholder="Type your question…", lines=2)

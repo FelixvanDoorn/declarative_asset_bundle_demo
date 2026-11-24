@@ -1,0 +1,16 @@
+resources:
+  pipelines:
+    wiki_chunks:
+      name: wiki_chunks
+      catalog: ${var.catalog}
+      schema: ${resources.schemas.web_agent_data.name}
+      serverless: true
+      libraries:
+        - glob:
+            include: ../src/pipeline/**
+      configuration:
+        wiki.source_file: ${var.wiki_source_file}
+        wiki.sample_modulo: ${var.wiki_sample_modulo}
+        wiki.chunk_size: "1000"
+        wiki.chunk_overlap: "200"
+        wiki.embedding_endpoint: ${var.embedding_endpoint}

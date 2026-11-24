@@ -4,12 +4,29 @@ resources:
       name: web-agent
       description: Demo web UI for the LangGraph agent
       source_code_path: ../app
-      # The app runs as its own service principal; these grant it access and are passed
-      # to the app as environment variables via app.yaml (valueFrom: <name>).
+      # The app runs as its own service principal. `resources` below grant it access and are
+      # passed to the app as environment variables (value_from: <name>). Read access to the
+      # vector index comes from the schema grant in wiki.schema.yml.
+      # Replaces app/app.yaml so the index name can come from the bundle.
+      config:
+        command: ["python", "app.py"]
+        env:
+          - name: SERVING_ENDPOINT
+            value_from: serving-endpoint
+          - name: EMBEDDING_ENDPOINT
+            value_from: embedding-endpoint
+          - name: MLFLOW_EXPERIMENT_ID
+            value_from: experiment
+          - name: VS_INDEX_NAME
+            value: ${var.catalog}.${resources.schemas.web_agent_data.name}.wiki_chunks_index
       resources:
         - name: serving-endpoint
           serving_endpoint:
             name: databricks-meta-llama-3-3-70b-instruct
+            permission: CAN_QUERY
+        - name: embedding-endpoint
+          serving_endpoint:
+            name: ${var.embedding_endpoint}
             permission: CAN_QUERY
         - name: experiment
           experiment:

@@ -1,0 +1,29 @@
+# One-off (unscheduled) refresh: run the chunk/embedding pipeline, then create or sync the
+# vector index.  databricks bundle run wiki_index
+resources:
+  jobs:
+    wiki_index:
+      name: wiki_index
+      tasks:
+        - task_key: refresh_chunks
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.wiki_chunks.id}
+        - task_key: sync_index
+          depends_on:
+            - task_key: refresh_chunks
+          environment_key: default
+          spark_python_task:
+            python_file: ../src/jobs/sync_index.py
+            parameters:
+              - --endpoint
+              - ${resources.vector_search_endpoints.wiki_search.name}
+              - --index
+              - ${var.catalog}.${resources.schemas.web_agent_data.name}.wiki_chunks_index
+              - --source-table
+              - ${var.catalog}.${resources.schemas.web_agent_data.name}.wiki_chunks
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+            dependencies:
+              - databricks-sdk>=0.170.0

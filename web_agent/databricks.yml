@@ -1,12 +1,27 @@
 # Web UI for the agent, deployed as a Databricks App. Separate from the ETL bundle
 # (parent folder) and script_agent/. From this folder:
-#   databricks bundle deploy           # create/update the app and its experiment
+#   databricks bundle deploy           # create/update the app, experiment, pipeline, endpoint, job
+#   databricks bundle run wiki_index   # build chunks + embeddings, then create/sync the vector index
 #   databricks bundle run web_agent    # deploy the code and start the app
 bundle:
   name: web_agent
 
 include:
   - resources/*.yml
+
+variables:
+  catalog:
+    description: Catalog for the web_agent schema (tables and vector index)
+    default: workspace
+  embedding_endpoint:
+    description: Embedding model endpoint used by ai_query in the pipeline and by the app
+    default: databricks-gte-large-en
+  wiki_source_file:
+    description: File from /Volumes/samples/databricks/datasets/wiki/ to load
+    default: part-00000.gz
+  wiki_sample_modulo:
+    description: Keep articles with id % N = 0 (1 = all ~21k articles, ~77k chunks)
+    default: "10"
 
 targets:
   dev:

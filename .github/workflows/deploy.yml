@@ -1,7 +1,11 @@
-# CI/CD for the Databricks bundle.
-#   Pull request -> validate, test, deploy to the `dev` target (schema `dev`)
-#   Push to main -> validate, deploy to the `prod` target
-# Both bundles are deployed: the ETL bundle (repo root) and the script agent (script_agent/).
+# CI/CD for the Databricks bundles.
+#   Every PR / push -> web_agent checks: lint, tests, type-check and build (no Databricks
+#                      access needed, so this also runs for fork PRs and before secrets exist)
+#   Pull request    -> validate, test, deploy the ETL and script_agent bundles to `dev`
+#                      (schema `dev`); web_agent is only validated (Free Edition allows a
+#                      single app/AI Search endpoint, which the manual dev deployment uses)
+#   Push to main    -> validate, deploy the ETL and script_agent bundles to `prod`
+# The deploy jobs are skipped until the DATABRICKS_HOST repo variable is set.
 #
 # Auth: a Databricks service principal via OAuth M2M. Configure in GitHub:
 #   Variables (repo):        DATABRICKS_HOST
@@ -28,11 +32,45 @@ env:
   DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
 
 jobs:
+  web-agent-checks:
+    name: web_agent checks (lint, tests, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web_agent/app
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web_agent/app/frontend/package-lock.json
+
+      - name: Frontend - install, type-check, test, build
+        working-directory: web_agent/app/frontend
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
+      - uses: astral-sh/setup-uv@v10
+
+      - name: Backend - lint and format check
+        run: |
+          uv run --no-project --python 3.11 --with-requirements requirements-dev.txt ruff check . --exclude frontend
+          uv run --no-project --python 3.11 --with-requirements requirements-dev.txt ruff format --check . --exclude frontend
+
+      - name: Backend - tests
+        run: uv run --no-project --python 3.11 --with-requirements requirements-dev.txt pytest -q
+
   deploy-dev:
     name: Validate, test & deploy (dev)
     if: >-
       github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      vars.DATABRICKS_HOST != ''
     runs-on: ubuntu-latest
     environment: dev
     # All PRs share one dev deployment: queue runs instead of overlapping.
@@ -63,9 +101,16 @@ jobs:
           databricks bundle validate -t dev
           databricks bundle deploy -t dev --auto-approve
 
+      - name: Validate web agent bundle (dev)
+        working-directory: web_agent
+        run: databricks bundle validate -t dev
+
   deploy-prod:
     name: Validate & deploy (prod)
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      vars.DATABRICKS_HOST != ''
     runs-on: ubuntu-latest
     environment: prod
     concurrency:

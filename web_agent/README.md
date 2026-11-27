@@ -56,6 +56,18 @@ uv run --no-project --python 3.11 --with-requirements requirements.txt python se
 cd web_agent/app/frontend && npm install && npm run dev
 ```
 
+### Tests
+
+No Databricks access needed: the agent, workspace client and LLM are faked. CI runs the same
+commands (`web-agent-checks` job in `.github/workflows/deploy.yml`).
+
+```bash
+cd web_agent/app/frontend && npm ci && npm run typecheck && npm test && npm run build
+cd web_agent/app
+uv run --no-project --python 3.11 --with-requirements requirements-dev.txt ruff check . --exclude frontend
+uv run --no-project --python 3.11 --with-requirements requirements-dev.txt pytest -q
+```
+
 Optional settings: `RETRIEVAL_SCORE_THRESHOLD` (default 0.003; this index scores good matches
 ~0.004–0.005 and unrelated ones ~0.002) and `RETRIEVAL_NUM_RESULTS` (default 5). With no passage
 above the threshold the app answers "couldn't find" instead of letting the model guess.

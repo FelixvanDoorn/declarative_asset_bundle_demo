@@ -6,14 +6,21 @@ import gradio as gr
 from agent import ask
 
 
-def answer(question: str) -> str:
+LOADING = "⏳ _Searching Wikipedia and thinking… this usually takes a few seconds._"
+
+
+def answer(question: str):
+    """Show a loading message and a disabled button right away, then the answer."""
     question = (question or "").strip()
     if not question:
-        return "_Type a question first._"
+        yield "_Type a question first._", gr.Button("Ask", interactive=True)
+        return
+    yield LOADING, gr.Button("Thinking…", interactive=False)
     try:
-        return ask(question)
+        result = ask(question)
     except Exception as e:  # noqa: BLE001 - show any error in the UI instead of a blank answer
-        return f"**Error:** {e}"
+        result = f"**Error:** {e}"
+    yield result, gr.Button("Ask", interactive=True)
 
 
 with gr.Blocks(title="Agent demo") as demo:
@@ -26,8 +33,9 @@ with gr.Blocks(title="Agent demo") as demo:
     gr.Markdown("## Answer")
     answer_box = gr.Markdown("_The answer will appear here._")
 
-    ask_button.click(answer, inputs=question, outputs=answer_box)
-    question.submit(answer, inputs=question, outputs=answer_box)
+    # show_progress="hidden": our own loading message replaces Gradio's default overlay.
+    ask_button.click(answer, inputs=question, outputs=[answer_box, ask_button], show_progress="hidden")
+    question.submit(answer, inputs=question, outputs=[answer_box, ask_button], show_progress="hidden")
 
 
 if __name__ == "__main__":

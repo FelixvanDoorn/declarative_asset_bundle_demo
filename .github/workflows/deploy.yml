@@ -1,0 +1,137 @@
+# CI/CD for the Databricks bundles.
+#   Every PR / push -> web_agent checks: lint, tests, type-check and build (no Databricks
+#                      access needed, so this also runs for fork PRs and before secrets exist)
+#   Pull request    -> validate, test, deploy the ETL and script_agent bundles to `dev`
+#                      (schema `dev`); web_agent is only validated (Free Edition allows a
+#                      single app/AI Search endpoint, which the manual dev deployment uses)
+#   Push to main    -> validate, deploy the ETL and script_agent bundles to `prod`
+# The deploy jobs are skipped until the DATABRICKS_HOST repo variable is set.
+#
+# Auth: a Databricks service principal via OAuth M2M. Configure in GitHub:
+#   Variables (repo):        DATABRICKS_HOST
+#   Secrets (env `dev`):     DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET
+#   Secrets (env `prod`):    DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET
+# (A personal access token also works: set a DATABRICKS_TOKEN secret instead.)
+#
+# Free Edition note: only one pipeline of each type can be active at a time,
+# so this workflow only deploys; it never runs jobs or pipelines.
+
+name: Databricks bundle CI/CD
+
+on:
+  pull_request:          # never pull_request_target: it would expose secrets to fork PRs
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+
+jobs:
+  web-agent-checks:
+    name: web_agent checks (lint, tests, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web_agent/app
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web_agent/app/frontend/package-lock.json
+
+      - name: Frontend - install, type-check, test, build
+        working-directory: web_agent/app/frontend
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
+      - uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Backend - lint and format check
+        run: |
+          uv run --no-project --python 3.11 --with-requirements requirements-dev.txt ruff check . --exclude frontend
+          uv run --no-project --python 3.11 --with-requirements requirements-dev.txt ruff format --check . --exclude frontend
+
+      - name: Backend - tests
+        run: uv run --no-project --python 3.11 --with-requirements requirements-dev.txt pytest -q
+
+  deploy-dev:
+    name: Validate, test & deploy (dev)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      vars.DATABRICKS_HOST != ''
+    runs-on: ubuntu-latest
+    environment: dev
+    # All PRs share one dev deployment: queue runs instead of overlapping.
+    concurrency:
+      group: databricks-dev
+      cancel-in-progress: false
+    env:
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: databricks/setup-cli@v1.26.0
+      - uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Validate bundle
+        run: databricks bundle validate -t dev --var schema=dev
+
+      - name: Run unit tests (Databricks Connect, serverless)
+        run: uv run pytest
+
+      - name: Deploy to dev
+        run: databricks bundle deploy -t dev --var schema=dev --auto-approve
+
+      - name: Validate & deploy script agent bundle (dev)
+        working-directory: script_agent
+        run: |
+          databricks bundle validate -t dev
+          databricks bundle deploy -t dev --auto-approve
+
+      - name: Validate web agent bundle (dev)
+        working-directory: web_agent
+        run: databricks bundle validate -t dev
+
+  deploy-prod:
+    name: Validate & deploy (prod)
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      vars.DATABRICKS_HOST != ''
+    runs-on: ubuntu-latest
+    environment: prod
+    concurrency:
+      group: databricks-prod
+      cancel-in-progress: false
+    env:
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: databricks/setup-cli@v1.26.0
+
+      - name: Validate bundle
+        run: databricks bundle validate -t prod
+
+      - name: Deploy to prod
+        run: databricks bundle deploy -t prod --auto-approve
+
+      - name: Validate & deploy script agent bundle (prod)
+        working-directory: script_agent
+        run: |
+          databricks bundle validate -t prod
+          databricks bundle deploy -t prod --auto-approve

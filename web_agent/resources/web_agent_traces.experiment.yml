@@ -1,0 +1,5 @@
+resources:
+  experiments:
+    # Traces from the app go here (separate from script_agent's /Shared/my-first-trace).
+    web_agent_traces:
+      name: /Users/${workspace.current_user.userName}/web-agent

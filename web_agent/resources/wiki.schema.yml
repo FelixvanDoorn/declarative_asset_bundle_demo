@@ -1,0 +1,11 @@
+resources:
+  schemas:
+    # Holds the wiki tables and the vector index. In dev mode the name gets a dev_<user>_ prefix.
+    web_agent_data:
+      catalog_name: ${var.catalog}
+      name: web_agent
+      comment: Wikipedia chunks, embeddings and vector index for the web agent
+      grants:
+        # The app's service principal reads the index (SELECT on the schema covers it).
+        - principal: ${resources.apps.web_agent.service_principal_client_id}
+          privileges: [USE_SCHEMA, SELECT]

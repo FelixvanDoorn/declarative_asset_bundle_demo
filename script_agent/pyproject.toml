@@ -1,0 +1,18 @@
+# Local environment for the script agent (uv). Not a package: run with
+#   uv run src/agent.py
+# The Databricks job installs the same dependencies via resources/script_agent.job.yml.
+[project]
+name = "script-agent"
+version = "0.0.1"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "databricks-langchain>=0.23.0",
+    "langgraph>=1.2.24",
+    "mlflow>=3.18.0",
+]
+
+[dependency-groups]
+dev = ["ruff"]
+
+[tool.ruff]
+line-length = 120

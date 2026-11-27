@@ -1,0 +1,6 @@
+resources:
+  vector_search_endpoints:
+    # Free Edition allows a single AI Search (Vector Search) endpoint with one search unit.
+    wiki_search:
+      name: wiki-search
+      endpoint_type: STANDARD

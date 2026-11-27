@@ -55,7 +55,7 @@ jobs:
           npm test
           npm run build
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
 
       - name: Backend - lint and format check
         run: |
@@ -84,7 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: databricks/setup-cli@v1.26.0
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
 
       - name: Validate bundle
         run: databricks bundle validate -t dev --var schema=dev

@@ -2,6 +2,7 @@
 # (parent folder) and script_agent/. From this folder:
 #   databricks bundle deploy           # create/update the app, experiment, pipeline, endpoint, job
 #   databricks bundle run wiki_index   # build chunks + embeddings, then create/sync the vector index
+#   (cd app/frontend && npm ci && npm run build)   # build the React app into app/static/
 #   databricks bundle run web_agent    # deploy the code and start the app
 bundle:
   name: web_agent
@@ -9,7 +10,15 @@ bundle:
 include:
   - resources/*.yml
 
+# app/static/ (the built React app) is git-ignored, but must still be uploaded with the app.
+sync:
+  include:
+    - app/static/**
+
 variables:
+  chat_endpoint:
+    description: Chat model endpoint the agent uses
+    default: databricks-meta-llama-3-3-70b-instruct
   catalog:
     description: Catalog for the web_agent schema (tables and vector index)
     default: workspace

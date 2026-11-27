@@ -20,3 +20,7 @@ scratch/**
 !.env.example
 .databrickscfg
 .claude/
+
+# Frontend (web_agent): dependencies and build output (built before deploy, see web_agent/README.md)
+node_modules/
+web_agent/app/static/

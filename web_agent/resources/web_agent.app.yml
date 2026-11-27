@@ -2,14 +2,14 @@ resources:
   apps:
     web_agent:
       name: web-agent
-      description: Demo web UI for the LangGraph agent
+      description: Wiki question-answering agent (React + FastAPI)
       source_code_path: ../app
       # The app runs as its own service principal. `resources` below grant it access and are
       # passed to the app as environment variables (value_from: <name>). Read access to the
       # vector index comes from the schema grant in wiki.schema.yml.
       # Replaces app/app.yaml so the index name can come from the bundle.
       config:
-        command: ["python", "app.py"]
+        command: ["python", "server.py"]
         env:
           - name: SERVING_ENDPOINT
             value_from: serving-endpoint
@@ -22,7 +22,7 @@ resources:
       resources:
         - name: serving-endpoint
           serving_endpoint:
-            name: databricks-meta-llama-3-3-70b-instruct
+            name: ${var.chat_endpoint}
             permission: CAN_QUERY
         - name: embedding-endpoint
           serving_endpoint:
